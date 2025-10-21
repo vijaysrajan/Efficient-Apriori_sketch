@@ -87,11 +87,13 @@ def write_rules_to_csv(
 
     Output Format
     -------------
-    CSV columns: level,frequent_itemset,count,support,confidence,lift,conviction
+    CSV columns: Level,frequent_itemset,count,support,lift,antecedent,consequent,confidence,conviction
 
     where:
-    - level is the total size of the rule (len(lhs) + len(rhs))
+    - Level is the total size of the rule (len(lhs) + len(rhs))
     - frequent_itemset is the full itemset (lhs + rhs)
+    - antecedent is the left-hand side of the rule (items before ->)
+    - consequent is the right-hand side of the rule (items after ->)
 
     Examples
     --------
@@ -110,12 +112,14 @@ def write_rules_to_csv(
 
         # Write header
         writer.writerow([
-            'level',
+            'Level',
             'frequent_itemset',
             'count',
             'support',
-            'confidence',
             'lift',
+            'antecedent',
+            'consequent',
+            'confidence',
             'conviction'
         ])
 
@@ -127,6 +131,10 @@ def write_rules_to_csv(
             # Combine lhs and rhs for the frequent itemset
             full_itemset = tuple(sorted(rule.lhs + rule.rhs))
             itemset_str = item_separator.join(full_itemset)
+
+            # Format antecedent and consequent
+            antecedent_str = item_separator.join(sorted(rule.lhs))
+            consequent_str = item_separator.join(sorted(rule.rhs))
 
             # Get metrics
             count_full = rule.count_full if hasattr(rule, 'count_full') else 0.0
@@ -141,8 +149,10 @@ def write_rules_to_csv(
                 itemset_str,
                 f"{count_full:.1f}",
                 f"{support:.6f}",
-                f"{confidence:.6f}",
                 f"{lift:.6f}",
+                antecedent_str,
+                consequent_str,
+                f"{confidence:.6f}",
                 f"{conviction:.6f}"
             ])
 

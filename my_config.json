@@ -6,6 +6,6 @@
   "output_itemsets_path": "./output/itemsets.csv",
   "output_rules_path": "./output/rules.csv",
   "item_separator": " && ",
-  "min_confidence": 0.2,
+  "min_confidence": 0.05,
   "sketch_lg_k": 12
 }
