@@ -59,7 +59,7 @@ def write_itemsets_to_csv(
                 if level == 1:
                     itemset_str = itemset[0]
                 else:
-                    itemset_str = item_separator.join(itemset)
+                    itemset_str = item_separator.join(sorted(itemset))
 
                 # Compute support
                 support = count / total_count if total_count > 0 else 0.0
