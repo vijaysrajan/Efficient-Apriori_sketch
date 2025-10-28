@@ -6,9 +6,13 @@ Support for Apache DataSketches theta sketches in Apriori algorithm.
 
 import base64
 import csv
+import sys
 from dataclasses import dataclass
 from typing import Dict, Set, Optional
 from datasketches import compact_theta_sketch, update_theta_sketch
+
+# Increase CSV field size limit to handle large base64-encoded sketches
+csv.field_size_limit(sys.maxsize)
 
 
 @dataclass

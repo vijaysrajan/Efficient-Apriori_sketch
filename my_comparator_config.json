@@ -19,6 +19,9 @@
   "// item_separator": " && ",
   "// sketch_lg_k_yes_case": 12,
   "// sketch_lg_k_no_case": 12,
+  "// excluded_items": ["item1", "item2"],
+  "// use_equi_join": false,
+  "// filter_item": "region=North",
 
   "// ========================================": "",
   "// CASE 2a: Single-File Mode with One Target": "",
@@ -27,15 +30,18 @@
   "// ========================================": "",
   "// To use this mode, comment out the two-file fields above and uncomment below": "",
 
-  "input_csv_path": "./input/DU_sketch_12NominalVal.csv",
-  "min_support_for_yes_case": 0.01,
-  "min_support_for_no_case": 0.01,
+  "input_csv_path": "./input/DU_sketch_14NominalVal.csv",
+  "min_support_for_yes_case": 0.001,
+  "min_support_for_no_case": 0.001,
   "max_levels": 5,
-  "include_all_level1": false,
-  "output_itemsets_path": "./output/DU_comparator_joined.csv",
+  "include_all_level1": true,
+  "output_itemsets_path": "./output/DU14_comparator_joined.csv",
   "item_separator": " && ",
-  "sketch_lg_k": 12,
-  "target_item_1": "tripOutcome=bad",
+  "sketch_lg_k": 14,
+  "target_item_1": "tripOutcome=good",
+  "excluded_items": null,
+  "use_equi_join": true,
+  "filter_item": null,
 
   "// ========================================": "",
   "// CASE 2b: Single-File Mode with Two Targets": "",
@@ -45,8 +51,8 @@
   "// To use this mode, comment out the two-file fields above and uncomment below": "",
 
   "// input_csv_path": "./input/sketches.csv",
-  "// min_support_for_yes_case": 0.05,
-  "// min_support_for_no_case": 0.05,
+  "// min_support_for_yes_case": 0.03,
+  "// min_support_for_no_case": 0.02,
   "// max_levels": 5,
   "// include_all_level1": true,
   "// output_itemsets_path": "./output/comparator_joined.csv",
@@ -54,6 +60,9 @@
   "// sketch_lg_k": 12,
   "// target_item_1": "outcome=positive",
   "// target_item_0": "outcome=negative",
+  "// excluded_items": ["item1", "item2"],
+  "// use_equi_join": false,
+  "// filter_item": "region=North",
 
   "// ========================================": "",
   "// Field Descriptions": "",
@@ -80,5 +89,8 @@
   "//   max_levels: Maximum itemset depth": "",
   "//   include_all_level1: Include all level 1 items (true/false)": "",
   "//   output_itemsets_joined: Path to joined output CSV": "",
-  "//   item_separator: Separator for items in itemsets (default ' && ')": ""
+  "//   item_separator: Separator for items in itemsets (default ' && ')": "",
+  "//   excluded_items: List of items to exclude from analysis (optional, e.g., ['item1', 'item2'])": "",
+  "//   use_equi_join: If true, only output itemsets in both yes and no cases (default: false)": "",
+  "//   filter_item: Pre-filter item to intersect all sketches before splitting (optional, e.g., 'region=North')": ""
 }

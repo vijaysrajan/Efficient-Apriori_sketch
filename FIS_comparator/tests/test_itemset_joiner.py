@@ -52,7 +52,7 @@ class TestFullOuterJoinItemsets:
 
             # Find row for item A (should be in both)
             a_row = next(r for r in rows if r["Frequent_itemset"] == "A")
-            assert a_row["Frequent_item_set_seen_in"] == "both"
+            # Note: "Frequent_item_set_seen_in" column was removed in new version
             assert a_row["Yes_case_count"] == pytest.approx(100.0, abs=0.1)
             assert a_row["No_case_count"] == pytest.approx(50.0, abs=0.1)
             assert a_row["Total"] == pytest.approx(150.0, abs=0.1)
@@ -60,16 +60,14 @@ class TestFullOuterJoinItemsets:
 
             # Find row for item B (only in yes)
             b_row = next(r for r in rows if r["Frequent_itemset"] == "B")
-            assert b_row["Frequent_item_set_seen_in"] == "yes"
             assert b_row["Yes_case_count"] == pytest.approx(80.0, abs=0.1)
-            # No case should use min_support * total = 0.3 * 100 = 30
-            assert b_row["No_case_count"] == pytest.approx(30.0, abs=0.1)
+            # No case should be empty string in CSV, which reads as 0.0
+            assert b_row["No_case_count"] == pytest.approx(0.0, abs=0.1)
 
             # Find row for item C (only in no)
             c_row = next(r for r in rows if r["Frequent_itemset"] == "C")
-            assert c_row["Frequent_item_set_seen_in"] == "no"
-            # Yes case should use min_support * total = 0.3 * 200 = 60
-            assert c_row["Yes_case_count"] == pytest.approx(60.0, abs=0.1)
+            # Yes case should be empty string in CSV, which reads as 0.0
+            assert c_row["Yes_case_count"] == pytest.approx(0.0, abs=0.1)
             assert c_row["No_case_count"] == pytest.approx(40.0, abs=0.1)
 
         finally:
@@ -99,12 +97,16 @@ class TestFullOuterJoinItemsets:
             # Should have 2 rows
             assert len(rows) == 2
 
-            # Both items should have seen_in as "yes" or "no"
+            # Verify counts (Note: "Frequent_item_set_seen_in" column removed)
             a_row = next(r for r in rows if r["Frequent_itemset"] == "A")
-            assert a_row["Frequent_item_set_seen_in"] == "yes"
+            assert a_row["Yes_case_count"] == pytest.approx(100.0, abs=0.1)
+            # Missing no count should be 0.0 (empty string in CSV)
+            assert a_row["No_case_count"] == pytest.approx(0.0, abs=0.1)
 
             b_row = next(r for r in rows if r["Frequent_itemset"] == "B")
-            assert b_row["Frequent_item_set_seen_in"] == "no"
+            # Missing yes count should be 0.0 (empty string in CSV)
+            assert b_row["Yes_case_count"] == pytest.approx(0.0, abs=0.1)
+            assert b_row["No_case_count"] == pytest.approx(50.0, abs=0.1)
 
         finally:
             os.unlink(temp_path)

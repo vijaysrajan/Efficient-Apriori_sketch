@@ -21,6 +21,7 @@ def full_outer_join_itemsets(
     min_support_no: float,
     output_path: str,
     item_separator: str = " && ",
+    use_equi_join: bool = False,
 ):
     """
     Perform a full outer join on two sets of frequent itemsets.
@@ -46,17 +47,21 @@ def full_outer_join_itemsets(
         Path to output CSV file.
     item_separator : str
         Separator for items in itemset strings (default: " && ").
+    use_equi_join : bool
+        If True, only output itemsets in both yes and no cases (default: False).
 
     Output Format
     -------------
     CSV with columns:
     - Level: The level (size) of the itemset
     - Frequent_itemset: String representation of the itemset
-    - Frequent_item_set_seen_in: "both", "yes", or "no"
-    - Yes_case_count: Count in yes case (or min_support * total if not present)
-    - No_case_count: Count in no case (or min_support * total if not present)
+    - Yes_case_count: Count in yes case (or empty string if not present in full outer join)
+    - No_case_count: Count in no case (or empty string if not present in full outer join)
     - Total: Sum of yes and no counts
     - Yes_percentage: Percentage of yes in total (rounded to 3 decimals)
+
+    When use_equi_join=True, only itemsets appearing in both cases are included.
+    When use_equi_join=False, all itemsets are included with empty strings for missing counts.
 
     Examples
     --------
@@ -90,26 +95,27 @@ def full_outer_join_itemsets(
         in_yes = level in yes_itemsets and itemset in yes_itemsets[level]
         in_no = level in no_itemsets and itemset in no_itemsets[level]
 
-        if in_yes and in_no:
-            seen_in = "both"
-        elif in_yes:
-            seen_in = "yes"
-        else:
-            seen_in = "no"
+        # For equi-join, skip if not in both
+        if use_equi_join and not (in_yes and in_no):
+            continue
 
         # Get yes count
         if in_yes:
             yes_count = yes_itemsets[level][itemset]
+            yes_count_present = True
         else:
-            # Use min_support * total as default
-            yes_count = min_support_yes * yes_total
+            # Use empty string for missing in full outer join
+            yes_count = 0.0  # For calculation purposes
+            yes_count_present = False
 
         # Get no count
         if in_no:
             no_count = no_itemsets[level][itemset]
+            no_count_present = True
         else:
-            # Use min_support * total as default
-            no_count = min_support_no * no_total
+            # Use empty string for missing in full outer join
+            no_count = 0.0  # For calculation purposes
+            no_count_present = False
 
         # Compute totals and percentage
         total = yes_count + no_count
@@ -126,9 +132,10 @@ def full_outer_join_itemsets(
                 "level": level,
                 "itemset": itemset,
                 "itemset_str": itemset_str,
-                "seen_in": seen_in,
                 "yes_count": yes_count,
+                "yes_count_present": yes_count_present,
                 "no_count": no_count,
+                "no_count_present": no_count_present,
                 "total": total,
                 "yes_percentage": yes_percentage,
             }
@@ -146,7 +153,6 @@ def full_outer_join_itemsets(
             [
                 "Level",
                 "Frequent_itemset",
-                "Frequent_item_set_seen_in",
                 "Yes_case_count",
                 "No_case_count",
                 "Total",
@@ -156,14 +162,17 @@ def full_outer_join_itemsets(
 
         # Write data rows
         for row in rows:
+            # Format counts: use empty string if not present, otherwise format as integer
+            yes_count_str = f"{row['yes_count']:.0f}" if row["yes_count_present"] else ""
+            no_count_str = f"{row['no_count']:.0f}" if row["no_count_present"] else ""
+
             writer.writerow(
                 [
                     row["level"],
                     row["itemset_str"],
-                    row["seen_in"],
-                    f"{row['yes_count']:.1f}",
-                    f"{row['no_count']:.1f}",
-                    f"{row['total']:.1f}",
+                    yes_count_str,
+                    no_count_str,
+                    f"{row['total']:.0f}",
                     f"{row['yes_percentage']:.3f}",
                 ]
             )
@@ -199,13 +208,16 @@ def read_joined_itemsets(csv_path: str) -> list:
         reader = csv.DictReader(csvfile)
 
         for row in reader:
+            # Handle empty strings for counts
+            yes_count = float(row["Yes_case_count"]) if row["Yes_case_count"] else 0.0
+            no_count = float(row["No_case_count"]) if row["No_case_count"] else 0.0
+
             rows.append(
                 {
                     "Level": int(row["Level"]),
                     "Frequent_itemset": row["Frequent_itemset"],
-                    "Frequent_item_set_seen_in": row["Frequent_item_set_seen_in"],
-                    "Yes_case_count": float(row["Yes_case_count"]),
-                    "No_case_count": float(row["No_case_count"]),
+                    "Yes_case_count": yes_count,
+                    "No_case_count": no_count,
                     "Total": float(row["Total"]),
                     "Yes_percentage": float(row["Yes_percentage"]),
                 }

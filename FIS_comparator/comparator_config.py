@@ -10,9 +10,9 @@ in two different modes:
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 
 @dataclass
@@ -50,6 +50,12 @@ class TwoFileComparatorConfig:
         Sketch size parameter for yes case (log base 2)
     sketch_lg_k_no_case : int
         Sketch size parameter for no case (log base 2)
+    excluded_items : Optional[List[str]]
+        List of items to exclude from analysis (removed from input sketches)
+    use_equi_join : bool
+        If True, only output itemsets that appear in both yes and no cases (default: False)
+    filter_item : Optional[str]
+        Optional pre-filter item - intersect all sketches with this before splitting
     """
 
     input_csv_path_for_yes_case: str
@@ -64,6 +70,9 @@ class TwoFileComparatorConfig:
     item_separator: str = " && "
     sketch_lg_k_yes_case: int = 12
     sketch_lg_k_no_case: int = 12
+    excluded_items: Optional[List[str]] = None
+    use_equi_join: bool = False
+    filter_item: Optional[str] = None
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -141,6 +150,12 @@ class SingleFileComparatorConfig:
         Target item for yes case (mandatory)
     target_item_0 : Optional[str]
         Target item for no case (optional, mutually exclusive with target_item_1)
+    excluded_items : Optional[List[str]]
+        List of items to exclude from analysis (removed from input sketches)
+    use_equi_join : bool
+        If True, only output itemsets that appear in both yes and no cases (default: False)
+    filter_item : Optional[str]
+        Optional pre-filter item - intersect all sketches with this before splitting
     """
 
     input_csv_path: str
@@ -153,6 +168,9 @@ class SingleFileComparatorConfig:
     sketch_lg_k: int = 12
     target_item_1: str = ""
     target_item_0: Optional[str] = None
+    excluded_items: Optional[List[str]] = None
+    use_equi_join: bool = False
+    filter_item: Optional[str] = None
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -256,6 +274,9 @@ def load_comparator_config(
 
     # Set defaults for optional parameters
     config_dict.setdefault("item_separator", " && ")
+    config_dict.setdefault("excluded_items", None)
+    config_dict.setdefault("use_equi_join", False)
+    config_dict.setdefault("filter_item", None)
 
     if has_two_file_fields:
         # Two-file mode
@@ -302,7 +323,12 @@ def save_comparator_config(
             "item_separator": config.item_separator,
             "sketch_lg_k_yes_case": config.sketch_lg_k_yes_case,
             "sketch_lg_k_no_case": config.sketch_lg_k_no_case,
+            "use_equi_join": config.use_equi_join,
         }
+        if config.excluded_items is not None:
+            config_dict["excluded_items"] = config.excluded_items
+        if config.filter_item is not None:
+            config_dict["filter_item"] = config.filter_item
     elif isinstance(config, SingleFileComparatorConfig):
         config_dict = {
             "input_csv_path": config.input_csv_path,
@@ -314,9 +340,14 @@ def save_comparator_config(
             "item_separator": config.item_separator,
             "sketch_lg_k": config.sketch_lg_k,
             "target_item_1": config.target_item_1,
+            "use_equi_join": config.use_equi_join,
         }
         if config.target_item_0 is not None:
             config_dict["target_item_0"] = config.target_item_0
+        if config.excluded_items is not None:
+            config_dict["excluded_items"] = config.excluded_items
+        if config.filter_item is not None:
+            config_dict["filter_item"] = config.filter_item
     else:
         raise TypeError(f"Unknown config type: {type(config)}")
 

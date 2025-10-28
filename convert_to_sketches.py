@@ -28,6 +28,9 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
+# Increase CSV field size limit to handle large base64-encoded sketches
+csv.field_size_limit(sys.maxsize)
+
 # Add the parent directory to the path
 sys.path.insert(0, str(Path(__file__).parent))
 

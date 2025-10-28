@@ -8,14 +8,18 @@ comparator, including intersection and A-not-B operations.
 """
 
 import csv
+import sys
 import base64
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 from datasketches import (
     compact_theta_sketch,
     theta_intersection,
     theta_a_not_b,
     theta_union,
 )
+
+# Increase CSV field size limit to handle large base64-encoded sketches
+csv.field_size_limit(sys.maxsize)
 
 
 def intersect_sketches(
@@ -288,6 +292,117 @@ def load_sketches_from_csv(
             raise ValueError("No sketches found in CSV file")
 
     return sketches_dict, total_sketch, total_count
+
+
+def filter_excluded_items(
+    sketches_dict: Dict[str, compact_theta_sketch],
+    excluded_items: List[str],
+) -> Dict[str, compact_theta_sketch]:
+    """
+    Remove excluded items from sketch dictionary.
+
+    Parameters
+    ----------
+    sketches_dict : dict
+        Dictionary mapping item names to their theta sketches.
+    excluded_items : list of str
+        List of item names to exclude.
+
+    Returns
+    -------
+    dict
+        New dictionary with excluded items removed.
+
+    Examples
+    --------
+    >>> from datasketches import update_theta_sketch
+    >>> sketch1 = update_theta_sketch()
+    >>> sketch1.update(1)
+    >>> sketch2 = update_theta_sketch()
+    >>> sketch2.update(2)
+    >>> sketches = {"item1": sketch1.compact(), "item2": sketch2.compact()}
+    >>> filtered = filter_excluded_items(sketches, ["item1"])
+    >>> "item1" in filtered
+    False
+    >>> "item2" in filtered
+    True
+    """
+    return {k: v for k, v in sketches_dict.items() if k not in excluded_items}
+
+
+def apply_filter_item(
+    sketches_dict: Dict[str, compact_theta_sketch],
+    filter_item: str,
+) -> Tuple[Dict[str, compact_theta_sketch], compact_theta_sketch]:
+    """
+    Intersect all sketches with a filter item sketch.
+
+    This function extracts the filter_item sketch from the dictionary,
+    then intersects all other sketches with it. The filter_item itself
+    is removed from the output dictionary.
+
+    Parameters
+    ----------
+    sketches_dict : dict
+        Dictionary mapping item names to their theta sketches.
+    filter_item : str
+        Name of the filter item (must exist in sketches_dict).
+
+    Returns
+    -------
+    tuple
+        (filtered_sketches_dict, new_total_sketch) where:
+        - filtered_sketches_dict: Dictionary with all sketches intersected with filter
+        - new_total_sketch: The filter item's sketch (new total)
+
+    Raises
+    ------
+    ValueError
+        If filter_item is not found in sketches_dict.
+
+    Examples
+    --------
+    >>> from datasketches import update_theta_sketch
+    >>> sketch1 = update_theta_sketch()
+    >>> for i in [1, 2, 3]:
+    ...     sketch1.update(i)
+    >>> sketch2 = update_theta_sketch()
+    >>> for i in [2, 3, 4]:
+    ...     sketch2.update(i)
+    >>> filter_sk = update_theta_sketch()
+    >>> for i in [2, 3]:
+    ...     filter_sk.update(i)
+    >>> sketches = {
+    ...     "item1": sketch1.compact(),
+    ...     "item2": sketch2.compact(),
+    ...     "filter": filter_sk.compact()
+    ... }
+    >>> filtered, total = apply_filter_item(sketches, "filter")
+    >>> "filter" in filtered
+    False
+    >>> filtered["item1"].get_estimate()
+    2.0
+    """
+    if filter_item not in sketches_dict:
+        raise ValueError(
+            f"Filter item '{filter_item}' not found in sketches dictionary"
+        )
+
+    # Extract the filter sketch
+    filter_sketch = sketches_dict[filter_item]
+
+    # Create new dictionary without the filter item
+    sketches_without_filter = {
+        k: v for k, v in sketches_dict.items() if k != filter_item
+    }
+
+    # Intersect all sketches with the filter
+    filtered_sketches = intersect_sketches(sketches_without_filter, filter_sketch)
+
+    # The new total is the filter sketch itself
+    new_total_sketch = filter_sketch
+
+    return filtered_sketches, new_total_sketch
 
 
 if __name__ == "__main__":

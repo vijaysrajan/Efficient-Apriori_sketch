@@ -105,3 +105,8 @@ venv.bak/
 
 # gsheet files
 *.gsheet
+
+./output/
+./output/*
+output/
+output/*

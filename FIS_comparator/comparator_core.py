@@ -27,6 +27,8 @@ from .sketch_operations import (
     compute_total_sketch,
     load_sketches_from_csv,
     save_sketches_to_csv,
+    filter_excluded_items,
+    apply_filter_item,
 )
 from .itemset_joiner import full_outer_join_itemsets
 
@@ -85,6 +87,52 @@ def run_two_file_comparison(
     if verbosity > 0:
         print(f"  Loaded {len(no_manager.items)} items")
         print(f"  Total count estimate: {no_manager.total_count:.2f}")
+
+    # Apply filter_item if specified
+    if config.filter_item:
+        if verbosity > 0:
+            print(f"\nApplying filter item: {config.filter_item}")
+
+        # Apply to yes case
+        if config.filter_item in yes_manager.sketches_by_item:
+            filter_sketch = yes_manager.sketches_by_item[config.filter_item]
+            yes_manager.sketches_by_item = intersect_sketches(
+                {k: v for k, v in yes_manager.sketches_by_item.items() if k != config.filter_item},
+                filter_sketch
+            )
+            yes_manager.total_count = filter_sketch.get_estimate()
+            if verbosity > 0:
+                print(f"  YES case filtered to {len(yes_manager.items)} items")
+                print(f"  YES case new total: {yes_manager.total_count:.2f}")
+
+        # Apply to no case
+        if config.filter_item in no_manager.sketches_by_item:
+            filter_sketch = no_manager.sketches_by_item[config.filter_item]
+            no_manager.sketches_by_item = intersect_sketches(
+                {k: v for k, v in no_manager.sketches_by_item.items() if k != config.filter_item},
+                filter_sketch
+            )
+            no_manager.total_count = filter_sketch.get_estimate()
+            if verbosity > 0:
+                print(f"  NO case filtered to {len(no_manager.items)} items")
+                print(f"  NO case new total: {no_manager.total_count:.2f}")
+
+    # Remove excluded items if specified
+    if config.excluded_items:
+        if verbosity > 0:
+            print(f"\nExcluding {len(config.excluded_items)} items from analysis")
+
+        # Remove from yes case
+        for item in config.excluded_items:
+            yes_manager.sketches_by_item.pop(item, None)
+
+        # Remove from no case
+        for item in config.excluded_items:
+            no_manager.sketches_by_item.pop(item, None)
+
+        if verbosity > 0:
+            print(f"  YES case now has {len(yes_manager.items)} items")
+            print(f"  NO case now has {len(no_manager.items)} items")
 
     # Run Apriori on yes case
     if verbosity > 0:
@@ -146,9 +194,10 @@ def run_two_file_comparison(
         item_separator=config.item_separator,
     )
 
-    # Perform full outer join
+    # Perform join (full outer join or equi join)
+    join_type = "equi join" if config.use_equi_join else "full outer join"
     if verbosity > 0:
-        print(f"\nPerforming full outer join...")
+        print(f"\nPerforming {join_type}...")
         print(f"Writing joined itemsets to: {config.output_itemsets_joined}")
 
     full_outer_join_itemsets(
@@ -160,6 +209,7 @@ def run_two_file_comparison(
         min_support_no=config.min_support_for_no_case,
         output_path=config.output_itemsets_joined,
         item_separator=config.item_separator,
+        use_equi_join=config.use_equi_join,
     )
 
     if verbosity > 0:
@@ -219,6 +269,28 @@ def run_single_file_comparison_one_target(
     if verbosity > 0:
         print(f"  Loaded {len(sketches_dict)} items")
         print(f"  Total count estimate: {original_total:.2f}")
+
+    # Apply filter_item if specified
+    if config.filter_item:
+        if verbosity > 0:
+            print(f"\nApplying filter item: {config.filter_item}")
+
+        sketches_dict, total_sketch = apply_filter_item(sketches_dict, config.filter_item)
+        original_total = total_sketch.get_estimate()
+
+        if verbosity > 0:
+            print(f"  Filtered to {len(sketches_dict)} items")
+            print(f"  New total count: {original_total:.2f}")
+
+    # Remove excluded items if specified
+    if config.excluded_items:
+        if verbosity > 0:
+            print(f"\nExcluding {len(config.excluded_items)} items from analysis")
+
+        sketches_dict = filter_excluded_items(sketches_dict, config.excluded_items)
+
+        if verbosity > 0:
+            print(f"  Now have {len(sketches_dict)} items")
 
     # Extract target item sketch
     if config.target_item_1 not in sketches_dict:
@@ -322,9 +394,10 @@ def run_single_file_comparison_one_target(
         Path(yes_temp_path).unlink(missing_ok=True)
         Path(no_temp_path).unlink(missing_ok=True)
 
-    # Perform full outer join
+    # Perform join (full outer join or equi join)
+    join_type = "equi join" if config.use_equi_join else "full outer join"
     if verbosity > 0:
-        print(f"\nPerforming full outer join...")
+        print(f"\nPerforming {join_type}...")
         print(f"Writing joined itemsets to: {config.output_itemsets_path}")
 
     full_outer_join_itemsets(
@@ -336,6 +409,7 @@ def run_single_file_comparison_one_target(
         min_support_no=config.min_support_for_no_case,
         output_path=config.output_itemsets_path,
         item_separator=config.item_separator,
+        use_equi_join=config.use_equi_join,
     )
 
     if verbosity > 0:
@@ -395,6 +469,28 @@ def run_single_file_comparison_two_targets(
     if verbosity > 0:
         print(f"  Loaded {len(sketches_dict)} items")
         print(f"  Total count estimate: {original_total:.2f}")
+
+    # Apply filter_item if specified
+    if config.filter_item:
+        if verbosity > 0:
+            print(f"\nApplying filter item: {config.filter_item}")
+
+        sketches_dict, total_sketch = apply_filter_item(sketches_dict, config.filter_item)
+        original_total = total_sketch.get_estimate()
+
+        if verbosity > 0:
+            print(f"  Filtered to {len(sketches_dict)} items")
+            print(f"  New total count: {original_total:.2f}")
+
+    # Remove excluded items if specified
+    if config.excluded_items:
+        if verbosity > 0:
+            print(f"\nExcluding {len(config.excluded_items)} items from analysis")
+
+        sketches_dict = filter_excluded_items(sketches_dict, config.excluded_items)
+
+        if verbosity > 0:
+            print(f"  Now have {len(sketches_dict)} items")
 
     # Extract both target sketches
     if config.target_item_1 not in sketches_dict:
@@ -506,9 +602,10 @@ def run_single_file_comparison_two_targets(
         Path(yes_temp_path).unlink(missing_ok=True)
         Path(no_temp_path).unlink(missing_ok=True)
 
-    # Perform full outer join
+    # Perform join (full outer join or equi join)
+    join_type = "equi join" if config.use_equi_join else "full outer join"
     if verbosity > 0:
-        print(f"\nPerforming full outer join...")
+        print(f"\nPerforming {join_type}...")
         print(f"Writing joined itemsets to: {config.output_itemsets_path}")
 
     full_outer_join_itemsets(
@@ -520,6 +617,7 @@ def run_single_file_comparison_two_targets(
         min_support_no=config.min_support_for_no_case,
         output_path=config.output_itemsets_path,
         item_separator=config.item_separator,
+        use_equi_join=config.use_equi_join,
     )
 
     if verbosity > 0:
